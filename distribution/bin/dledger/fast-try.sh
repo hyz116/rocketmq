@@ -26,7 +26,7 @@ function startNameserver() {
 }
 
 function startBroker() {
-    export JAVA_OPT_EXT=" -Xms1g -Xmx1g  "
+    export JAVA_OPT_EXT=" -Xms512m -Xmx512m  "
     conf_name=$1
     nohup bin/mqbroker -c $conf_name &
 }
