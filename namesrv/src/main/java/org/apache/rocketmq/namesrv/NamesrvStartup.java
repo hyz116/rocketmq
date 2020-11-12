@@ -44,6 +44,7 @@ import java.util.concurrent.Callable;
 
 /**
  * NameServer 启动类
+ * NameServer 核心作用是接收broker注册以及客户端路由信息拉取请求。因此它的Netty网络架构很重要
  */
 public class NamesrvStartup {
 
@@ -56,7 +57,10 @@ public class NamesrvStartup {
     }
 
     public static NamesrvController main0(String[] args) {
-
+        /*
+        NamesrvController 类比于Spring MVC 的Controller
+        用来接收broker和客户端网络请求（broker注册，客户端拉取元数据）
+         */
         try {
             NamesrvController controller = createNamesrvController(args);
             start(controller);
@@ -72,6 +76,11 @@ public class NamesrvStartup {
         return null;
     }
 
+    /**
+     * "哪些需要细看？，哪些可以跳过？"
+     *  1. 初始化和解析NameServerConfig，NettyServerConfig相关配置信息。
+     *  2. 创建NamesrvController实例
+     */
     public static NamesrvController createNamesrvController(String[] args) throws IOException, JoranException {
         System.setProperty(RemotingCommand.REMOTING_VERSION_KEY, Integer.toString(MQVersion.CURRENT_VERSION));
         //PackageConflictDetect.detectFastjson();
@@ -83,15 +92,18 @@ public class NamesrvStartup {
             return null;
         }
 
-        final NamesrvConfig namesrvConfig = new NamesrvConfig();
-        final NettyServerConfig nettyServerConfig = new NettyServerConfig();
-        nettyServerConfig.setListenPort(9876);
-        if (commandLine.hasOption('c')) {
+        final NamesrvConfig namesrvConfig = new NamesrvConfig();  // NameServer 配置
+        final NettyServerConfig nettyServerConfig = new NettyServerConfig(); // NettyServer配置
+        nettyServerConfig.setListenPort(9876);  // 此处为什么要硬编码端口号？
+
+
+        if (commandLine.hasOption('c')) {  // 如果用脚本mqnamesrv启动，带"-c" 这个选项，带一个配置文件
             String file = commandLine.getOptionValue('c');
             if (file != null) {
                 InputStream in = new BufferedInputStream(new FileInputStream(file));
                 properties = new Properties();
                 properties.load(in);
+                // 可以用自定义配置覆盖 NamesrvConfig 和 NettyServerConfig 里的默认配置
                 MixAll.properties2Object(properties, namesrvConfig);
                 MixAll.properties2Object(properties, nettyServerConfig);
 
@@ -102,13 +114,14 @@ public class NamesrvStartup {
             }
         }
 
-        if (commandLine.hasOption('p')) {
+        if (commandLine.hasOption('p')) { // 如果用脚本mqnamesrv启动，带"-p" 这个选项, 打印配置信息
             InternalLogger console = InternalLoggerFactory.getLogger(LoggerName.NAMESRV_CONSOLE_NAME);
             MixAll.printObjectProperties(console, namesrvConfig);
             MixAll.printObjectProperties(console, nettyServerConfig);
             System.exit(0);
         }
 
+        // 把在namesrv命令行中带上的配置项覆盖到namesrvConfig中去
         MixAll.properties2Object(ServerUtil.commandLine2Properties(commandLine), namesrvConfig);
 
         if (null == namesrvConfig.getRocketmqHome()) {
@@ -123,10 +136,11 @@ public class NamesrvStartup {
         configurator.doConfigure(namesrvConfig.getRocketmqHome() + "/conf/logback_namesrv.xml");
 
         log = InternalLoggerFactory.getLogger(LoggerName.NAMESRV_LOGGER_NAME);
-
+        // 打印namesrvConfig，nettyServerConfig到日志中去
         MixAll.printObjectProperties(log, namesrvConfig);
         MixAll.printObjectProperties(log, nettyServerConfig);
 
+        // 基于namesrvConfig 和 nettyServerConfig 创建NamesrvController
         final NamesrvController controller = new NamesrvController(namesrvConfig, nettyServerConfig);
 
         // remember all configs to prevent discard
@@ -140,7 +154,7 @@ public class NamesrvStartup {
         if (null == controller) {
             throw new IllegalArgumentException("NamesrvController is null");
         }
-
+        // 对NamesrvController做初始化
         boolean initResult = controller.initialize();
         if (!initResult) {
             controller.shutdown();
@@ -155,6 +169,7 @@ public class NamesrvStartup {
             }
         }));
 
+        // 关键代码，启动Netty服务器
         controller.start();
 
         return controller;
