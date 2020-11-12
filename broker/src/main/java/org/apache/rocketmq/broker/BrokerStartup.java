@@ -259,6 +259,7 @@ public class BrokerStartup {
                         if (!this.hasShutdown) {
                             this.hasShutdown = true;
                             long beginTime = System.currentTimeMillis();
+                            // 会向NameServer发送取消注册消息
                             controller.shutdown();
                             long consumingTimeTotal = System.currentTimeMillis() - beginTime;
                             log.info("Shutdown hook over, consuming total time(ms): {}", consumingTimeTotal);

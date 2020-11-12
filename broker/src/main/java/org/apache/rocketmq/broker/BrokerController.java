@@ -135,6 +135,7 @@ public class BrokerController {
     private AbstractTransactionalMessageCheckListener transactionalMessageCheckListener;
     private Future<?> slaveSyncFuture;
 
+    private int count = 1;
 
     public BrokerController(
         final BrokerConfig brokerConfig,
@@ -768,6 +769,7 @@ public class BrokerController {
         } catch (InterruptedException e) {
         }
 
+        // 取消broker注册消息
         this.unregisterBrokerAll();
 
         if (this.sendMessageExecutor != null) {
@@ -888,12 +890,23 @@ public class BrokerController {
 
         this.registerBrokerAll(true, false, true);
 
-        // 关键的代码逻辑, 注册Broker
+        /*
+        scheduleAtFixedRate()为固定频率，scheduleWithFixedDelay()为固定延迟。
+        固定频率是相对于任务执行的开始时间，而固定延迟是相对于任务执行的结束时间
+         */
+        // 关键的代码逻辑, 第一次是注册broker，后续每隔30秒发送心跳消息
         this.scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
 
             @Override
             public void run() {
                 try {
+                    // 模拟发送心跳延时
+                    /*if (1 == count) {
+                        count++;
+                    } else {
+                        TimeUnit.SECONDS.sleep(125);
+                    }*/
+
                     // 去NameServer 注册 Broker
                     BrokerController.this.registerBrokerAll(true, false, brokerConfig.isForceRegister());
                 } catch (Throwable e) {

@@ -16,9 +16,6 @@
  */
 package org.apache.rocketmq.client.producer;
 
-import java.util.Collection;
-import java.util.List;
-import java.util.concurrent.ExecutorService;
 import org.apache.rocketmq.client.ClientConfig;
 import org.apache.rocketmq.client.QueryResult;
 import org.apache.rocketmq.client.Validators;
@@ -30,17 +27,15 @@ import org.apache.rocketmq.client.trace.AsyncTraceDispatcher;
 import org.apache.rocketmq.client.trace.TraceDispatcher;
 import org.apache.rocketmq.client.trace.hook.SendMessageTraceHookImpl;
 import org.apache.rocketmq.common.MixAll;
-import org.apache.rocketmq.common.message.Message;
-import org.apache.rocketmq.common.message.MessageBatch;
-import org.apache.rocketmq.common.message.MessageClientIDSetter;
-import org.apache.rocketmq.common.message.MessageDecoder;
-import org.apache.rocketmq.common.message.MessageExt;
-import org.apache.rocketmq.common.message.MessageId;
-import org.apache.rocketmq.common.message.MessageQueue;
+import org.apache.rocketmq.common.message.*;
 import org.apache.rocketmq.logging.InternalLogger;
 import org.apache.rocketmq.remoting.RPCHook;
 import org.apache.rocketmq.remoting.exception.RemotingException;
 import org.apache.rocketmq.remoting.netty.NettyRemotingClient;
+
+import java.util.Collection;
+import java.util.List;
+import java.util.concurrent.ExecutorService;
 
 /**
  * This class is the entry point for applications intending to send messages.
@@ -58,6 +53,19 @@ import org.apache.rocketmq.remoting.netty.NettyRemotingClient;
  * <strong>Thread Safety:</strong> After configuring and starting process, this class can be regarded as thread-safe
  * and used among multiple threads context.
  * </p>
+ *
+ *   DefaultMQProducer 内部核心类：DefaultMQProducerImpl
+ *   DefaultMQProducer 核心职责：拉取路由信息（Topic信息），发送消息到指定的Topic中
+ *   那么思考一下：路由信息以及和broker建立网络连接在DefaultMQProducer在初始化时就会做吗？如果你来设计你会怎么做？
+ *   显然，在 DefaultMQProducer 初始化是它是不知道业务系统需要将消息发送到那个topic中去，因此也没有必要此时就去拉取路由信息以及与broker建立
+ *   网络连接（没有前提条件）
+ *
+ *   问题记录：
+ *   1. 假设NameServer中的Topic信息变更了，Producer本地存在旧版本的Topic信息，此时发送消息应该会失败。又本地与NameServer Topic一致性
+ *     - 每隔30s拉取一次路由信息
+ *   的机制吗？
+ *   2. 如果NameServer 是有多个的，那么如何从中拿一个？如果选择了其中一个，刚要拉取，NameServer就挂了，怎么处理？
+ *
  */
 public class DefaultMQProducer extends ClientConfig implements MQProducer {
 
@@ -93,7 +101,7 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
     /**
      * Timeout for sending messages.
      */
-    private int sendMsgTimeout = 3000;
+    private int sendMsgTimeout = 60 * 1000;  // 暂时改大一点，测试
 
     /**
      * Compress message body threshold, namely, message body larger than 4k will be compressed on default.

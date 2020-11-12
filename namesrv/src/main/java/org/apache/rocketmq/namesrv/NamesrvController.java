@@ -40,6 +40,10 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 
+/**
+ * 1. NameServer 通过启动Netty服务器来接收外界请求，比如broker的注册请求，NameServer将broker的注册请求转发给DefaultRequestProcessor
+ * 来进行处理，注册数据的处理由RouteInfoManager来处理，其内部维护了一些Map的数据结构来存储broker相关元信息
+ */
 public class NamesrvController {
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.NAMESRV_LOGGER_NAME);
 
@@ -90,7 +94,7 @@ public class NamesrvController {
         this.registerProcessor();
 
         // 启动一个后台线程，执行定时任务。
-        // 定时扫描哪些broker没有发送心跳
+        // 每隔10s扫描哪些broker没有发送心跳
         this.scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
 
             @Override

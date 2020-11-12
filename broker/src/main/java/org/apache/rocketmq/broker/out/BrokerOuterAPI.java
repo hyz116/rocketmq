@@ -228,6 +228,10 @@ public class BrokerOuterAPI {
         throw new MQBrokerException(response.getCode(), response.getRemark());
     }
 
+    /**
+     * 取消broker注册
+     *
+     */
     public void unregisterBrokerAll(
         final String clusterName,
         final String brokerAddr,
@@ -247,7 +251,8 @@ public class BrokerOuterAPI {
         }
     }
 
-    public void unregisterBroker(
+    public void
+    unregisterBroker(
         final String namesrvAddr,
         final String clusterName,
         final String brokerAddr,

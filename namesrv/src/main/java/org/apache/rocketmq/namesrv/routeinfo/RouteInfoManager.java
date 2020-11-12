@@ -116,10 +116,12 @@ public class RouteInfoManager {
                 }
                 brokerNames.add(brokerName);
 
+                // 是否为第一次注册
                 boolean registerFirst = false;
 
                 BrokerData brokerData = this.brokerAddrTable.get(brokerName);
                 if (null == brokerData) {
+                    // 说明是第一次注册
                     registerFirst = true;
                     brokerData = new BrokerData(clusterName, brokerName, new HashMap<Long, String>());
                     this.brokerAddrTable.put(brokerName, brokerData);
@@ -152,6 +154,7 @@ public class RouteInfoManager {
                     }
                 }
 
+                // 心跳处理逻辑
                 BrokerLiveInfo prevBrokerLiveInfo = this.brokerLiveTable.put(brokerAddr,
                     new BrokerLiveInfo(
                         System.currentTimeMillis(),
@@ -422,12 +425,16 @@ public class RouteInfoManager {
         return null;
     }
 
+    /**
+     * 扫描broker存活性
+     * 如果心跳过期（120s），将broker从各种数据结构中移除 如 brokerLiveTable，filterServerTable，clusterAddrTable
+     */
     public void scanNotActiveBroker() {
         Iterator<Entry<String, BrokerLiveInfo>> it = this.brokerLiveTable.entrySet().iterator();
         while (it.hasNext()) {
             Entry<String, BrokerLiveInfo> next = it.next();
             long last = next.getValue().getLastUpdateTimestamp();
-            if ((last + BROKER_CHANNEL_EXPIRED_TIME) < System.currentTimeMillis()) {
+            if ((last + BROKER_CHANNEL_EXPIRED_TIME) < System.currentTimeMillis()) { // 默认心跳时间 120s
                 RemotingUtil.closeChannel(next.getValue().getChannel());
                 it.remove();
                 log.warn("The broker channel expired, {} {}ms", next.getKey(), BROKER_CHANNEL_EXPIRED_TIME);

@@ -55,21 +55,31 @@ public class MQFaultStrategy {
         this.sendLatencyFaultEnable = sendLatencyFaultEnable;
     }
 
+    /**
+     * 1. MessageQueue负责均衡算法
+     * 2. Broker 故障规避机制
+     * @param tpInfo
+     * @param lastBrokerName
+     * @return
+     */
     public MessageQueue selectOneMessageQueue(final TopicPublishInfo tpInfo, final String lastBrokerName) {
         if (this.sendLatencyFaultEnable) {
             try {
-                int index = tpInfo.getSendWhichQueue().getAndIncrement();
+
+                int index = tpInfo.getSendWhichQueue().getAndIncrement();  // 取得一个自增长的数值
                 for (int i = 0; i < tpInfo.getMessageQueueList().size(); i++) {
-                    int pos = Math.abs(index++) % tpInfo.getMessageQueueList().size();
+                    int pos = Math.abs(index++) % tpInfo.getMessageQueueList().size(); // 对MessageQueue数量取模
                     if (pos < 0)
                         pos = 0;
-                    MessageQueue mq = tpInfo.getMessageQueueList().get(pos);
+                    MessageQueue mq = tpInfo.getMessageQueueList().get(pos);  // 根据索引获取一个MessageQueue
+                    // Broker故障自动回避处理
                     if (latencyFaultTolerance.isAvailable(mq.getBrokerName())) {
                         if (null == lastBrokerName || mq.getBrokerName().equals(lastBrokerName))
                             return mq;
                     }
                 }
 
+                // Broker故障自动回避处理
                 final String notBestBroker = latencyFaultTolerance.pickOneAtLeast();
                 int writeQueueNums = tpInfo.getQueueIdByBroker(notBestBroker);
                 if (writeQueueNums > 0) {

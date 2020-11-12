@@ -16,11 +16,15 @@
  */
 package org.apache.rocketmq.client.producer;
 
-import java.util.concurrent.ExecutorService;
 import org.apache.rocketmq.client.exception.MQClientException;
 import org.apache.rocketmq.common.message.Message;
 import org.apache.rocketmq.remoting.RPCHook;
 
+import java.util.concurrent.ExecutorService;
+
+/**
+ * 事务消息
+ */
 public class TransactionMQProducer extends DefaultMQProducer {
     private TransactionCheckListener transactionCheckListener;
     private int checkThreadPoolMinSize = 1;
@@ -28,7 +32,7 @@ public class TransactionMQProducer extends DefaultMQProducer {
     private int checkRequestHoldMax = 2000;
 
     private ExecutorService executorService;
-
+    // 本地事务处理监听器
     private TransactionListener transactionListener;
 
     public TransactionMQProducer() {

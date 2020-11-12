@@ -203,7 +203,7 @@ public class NettyRemotingServer extends NettyRemotingAbstract implements Remoti
                                 new NettyEncoder(),  // 编码
                                 new NettyDecoder(),  // 解码
                                 new IdleStateHandler(0, 0, nettyServerConfig.getServerChannelMaxIdleTimeSeconds()), // 连接空闲管理
-                                new NettyConnectManageHandler(),  // 网络连接管理
+                                new NettyConnectManageHandler(),  // 网络连接管理, 处理连接空闲
                                 new NettyServerHandler()  // 关键的网络请求处理
                             );
                     }
@@ -442,7 +442,9 @@ public class NettyRemotingServer extends NettyRemotingAbstract implements Remoti
 
         @Override
         public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+            // 处理连接空闲
             if (evt instanceof IdleStateEvent) {
+                // 如果某条连接超过120s 没有读、写操作发生，则关闭该连接
                 IdleStateEvent event = (IdleStateEvent) evt;
                 if (event.state().equals(IdleState.ALL_IDLE)) {
                     final String remoteAddress = RemotingHelper.parseChannelRemoteAddr(ctx.channel());
